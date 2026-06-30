@@ -1,38 +1,31 @@
-# Этап 1: Сборка
-FROM node:20-alpine AS builder
-
+# Стадия 1: Сборка
+FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Копируем package.json и package-lock.json
+# Копируем зависимости
 COPY package*.json ./
+RUN npm ci
 
-# Устанавливаем зависимости через npm
-RUN npm install
-
-# Копируем исходный код
+# Копируем исходники
 COPY . .
 
-# Собираем приложение
+# Сборка Next.js
 RUN npm run build
 
-# Этап 2: Продакшн
-FROM node:20-alpine AS runner
-
+# Стадия 2: Продакшен
+FROM node:18-alpine AS runner
 WORKDIR /app
 
-# Копируем только production зависимости
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
+ENV NODE_ENV=production
+
+# Копируем standalone сборку
+COPY --from=builder /app/.next/standalone ./
+# Копируем статику
+COPY --from=builder /app/.next/static ./.next/static
+# Копируем public
 COPY --from=builder /app/public ./public
 
-# Создаем пользователя для безопасности
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-USER nextjs
-
-# Открываем порт
 EXPOSE 3000
 
-# Запускаем приложение
-CMD ["npm", "start"]
+# Запускаем сервер из standalone
+CMD ["node", "server.js"]

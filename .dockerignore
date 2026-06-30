@@ -3,3 +3,7 @@ node_modules
 .git
 .env*
 *.md
+.env.local
+Dockerfile
+.dockerignore
+*.log
